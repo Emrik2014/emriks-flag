@@ -84,7 +84,7 @@ al: { sv: "Albanien", en: "Albania" }, xk: { sv: "Kosovo", en: "Kosovo" }
 };
 
 let roundCountries=[], currentIndex=0, currentCountry, score=0, timeLeft=50, timerInterval;
-let players=[];
+let ranking=[];
 
 function shuffle(array){for(let i=array.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[array[i],array[j]]=[array[j],array[i]];}}
 
@@ -152,14 +152,15 @@ function endGame(){
   document.getElementById("score").textContent=`🎉 Du fick ${score} av 20`;
 
   let playerName=prompt("Ditt namn för rankingen:")||"Spelare";
-  players.push({name:playerName,score:score});
-  players.sort((a,b)=>b.score-a.score);
-  if(players.length>20) players=players.slice(0,20);
+  ranking.push({name:playerName, score:score});
+  // sortera på poäng högst först
+  ranking.sort((a,b)=>b.score - a.score);
+  if(ranking.length>20) ranking = ranking.slice(0,20); // max 20 spelare
 
-  let rankingHTML="<h3>🏆 Ranking</h3><ol>";
-  players.forEach(p=>{ rankingHTML+=`<li>${p.name} - ${p.score}/20 poäng</li>`; });
-  rankingHTML+="</ol>";
-  document.getElementById("ranking").innerHTML=rankingHTML;
+  let html = "<h3>🏆 Ranking</h3><ol>";
+  ranking.forEach(p=>{ html+=`<li>${p.name} - ${p.score}/20</li>`; });
+  html+="</ol>";
+  document.getElementById("ranking").innerHTML=html;
 
   const btn=document.createElement("button");
   btn.textContent="🔄 Spela igen";
