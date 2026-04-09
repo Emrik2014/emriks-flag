@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<title>Flag Quiz - Europa</title>
+<style>
+body {
+  font-family: Arial, sans-serif;
+  background: linear-gradient(135deg, #1e3c72, #2a5298);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  margin: 0;
+  color: white;
+}
+
+.container {
+  background: #ffffff10;
+  backdrop-filter: blur(10px);
+  padding: 30px;
+  border-radius: 20px;
+  text-align: center;
+  width: 300px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  transition: 0.3s;
+}
+
+/* Rätt animation */
+.correct {
+  animation: correctAnim 0.7s;
+}
+@keyframes correctAnim {
+  0% { transform: scale(1); background: #00ff8820; }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+/* Fel animation */
+.wrong {
+  animation: shake 0.7s;
+}
+@keyframes shake {
+  0% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  50% { transform: translateX(5px); }
+  75% { transform: translateX(-5px); }
+  100% { transform: translateX(0); }
+}
+
+#timer {
+  font-size: 22px;
+  margin-bottom: 15px;
+  font-weight: bold;
+}
+
+.warning {
+  color: #ff4d4d;
+  animation: blink 1s infinite;
+}
+
+@keyframes blink {
+  50% { opacity: 0.3; }
+}
+
+img {
+  width: 180px;
+  border-radius: 10px;
+  margin: 15px 0;
+}
+
+input {
+  padding: 10px;
+  width: 80%;
+  border-radius: 10px;
+  border: none;
+  outline: none;
+}
+
+button {
+  margin-top: 15px;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 10px;
+  background: #00c6ff;
+  color: white;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #0072ff;
+}
+
+#result {
+  margin-top: 15px;
+  font-weight: bold;
+}
+
+#score {
+  margin-top: 10px;
+  font-size: 18px;
+}
+</style>
+</head>
+<body>
+
+<div class="container" id="card">
+  <h1>🌍 Flag Quiz</h1>
+  <div id="timer">Tid kvar: 50</div>
+  <img id="flag">
+  <input id="answer" placeholder="Vilket land?">
+  <br>
+  <button onclick="checkAnswer()">Skicka</button>
+  <p id="result"></p>
+  <p id="score"></p>
+</div>
+
+<script>
+// Europa-länder
+const countryCodes = [
+"se","no","fi","dk","is","fr","de","it","es","pt",
+"nl","be","lu","pl","cz","sk","hu","at","ch",
+"gr","tr","ee","lv","lt","ie","gb","ua","by",
+"md","ro","bg","hr","si","rs","ba","me","mk","al","xk"
+];
+
+const countryNames = {
+se:"Sverige", no:"Norge", fi:"Finland", dk:"Danmark", is:"Island",
+fr:"Frankrike", de:"Tyskland", it:"Italien", es:"Spanien", pt:"Portugal",
+nl:"Nederländerna", be:"Belgien", lu:"Luxemburg",
+pl:"Polen", cz:"Tjeckien", sk:"Slovakien", hu:"Ungern",
+at:"Österrike", ch:"Schweiz",
+gr:"Grekland", tr:"Turkiet",
+ee:"Estland", lv:"Lettland", lt:"Litauen",
+ie:"Irland", gb:"Storbritannien",
+ua:"Ukraina", by:"Belarus", md:"Moldavien",
+ro:"Rumänien", bg:"Bulgarien",
+hr:"Kroatien", si:"Slovenien", rs:"Serbien",
+ba:"Bosnien och Hercegovina", me:"Montenegro",
+mk:"Nordmakedonien", al:"Albanien", xk:"Kosovo"
+};
+
+let roundCountries = [];
+let currentIndex = 0;
+let currentCountry;
+let score = 0;
+
+let timeLeft = 50;
+let timerInterval;
+
+// Shuffle-funktion
+function shuffle(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+}
+
+// Starta ny runda med 20 unika länder
+function startNewRound() {
+  const temp = [...countryCodes];
+  shuffle(temp);
+  roundCountries = temp.slice(0, 20);
+  currentIndex = 0;
+  score = 0;
+}
+
+// Timerfunktion
+function startTimer() {
+  timeLeft = 50;
+  const timerEl = document.getElementById("timer");
+
+  timerEl.textContent = "Tid kvar: " + timeLeft;
+
+  timerInterval = setInterval(() => {
+    timeLeft--;
+    timerEl.textContent = "Tid kvar: " + timeLeft;
+
+    if (timeLeft <= 10) {
+      timerEl.classList.add("warning");
+    } else {
+      timerEl.classList.remove("warning");
+    }
+
+    if (timeLeft <= 0) {
+      clearInterval(timerInterval);
+      timeUp();
+    }
+  }, 1000);
+}
+
+// Ladda nästa flagga
+function loadFlag() {
+  if (currentIndex >= roundCountries.length) {
+    endGame();
+    return;
+  }
+
+  const code = roundCountries[currentIndex];
+  currentCountry = { 
+    name: countryNames[code],
+    flag: `https://flagcdn.com/w320/${code}.png`
+  };
+
+  currentIndex++;
+
+  document.getElementById("flag").src = currentCountry.flag;
+  document.getElementById("answer").value = "";
+  document.getElementById("result").textContent = "";
+  document.getElementById("timer").classList.remove("warning");
+
+  startTimer();
+}
+
+// Kontrollera svar
+function checkAnswer() {
+  clearInterval(timerInterval);
+  const input = document.getElementById("answer").value.toLowerCase();
+  const correct = currentCountry.name.toLowerCase();
+  const card = document.getElementById("card");
+
+  if (input === correct) {
+    document.getElementById("result").textContent = "✅ Rätt!";
+    score++;
+    card.classList.add("correct");
+  } else {
+    document.getElementById("result").textContent = `❌ Fel! Rätt svar: ${currentCountry.name}`;
+    card.classList.add("wrong");
+  }
+
+  setTimeout(() => {
+    card.classList.remove("correct", "wrong");
+    loadFlag();
+  }, 2000); // paus 2 sek mellan flaggor
+}
+
+// Tid slut
+function timeUp() {
+  document.getElementById("result").textContent = `⏱ Tiden är slut! Rätt svar: ${currentCountry.name}`;
+  setTimeout(loadFlag, 2000);
+}
+
+// Slut på spelet
+function endGame() {
+  document.getElementById("flag").style.display = "none";
+  document.getElementById("answer").style.display = "none";
+  document.getElementById("timer").style.display = "none";
+  document.getElementById("result").textContent = "";
+  document.getElementById("score").textContent = `🎉 Du fick ${score} av 20`;
+}
+
+// Starta spelet
+startNewRound();
+loadFlag();
+</script>
+
+</body>
+</html>
