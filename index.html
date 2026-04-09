@@ -20,7 +20,7 @@ body {
   padding: 30px;
   border-radius: 20px;
   text-align: center;
-  width: 320px;
+  width: 400px;
   box-shadow: 0 10px 30px rgba(0,0,0,0.3);
   transition: 0.3s;
 }
@@ -33,10 +33,20 @@ body {
 @keyframes blink { 50% { opacity:0.3; } }
 #progress-container { background:#ffffff30; border-radius:10px; width:100%; height:15px; margin-bottom:15px; }
 #progress-bar { background:#00c6ff; height:100%; width:0%; border-radius:10px; transition:0.3s; }
-img { width:180px; border-radius:10px; margin:15px 0; }
-input { padding:10px; width:80%; border-radius:10px; border:none; outline:none; }
-button { margin-top:15px; padding:10px 20px; border:none; border-radius:10px; background:#00c6ff; color:white; cursor:pointer; }
-button:hover { background:#0072ff; }
+img { width:200px; border-radius:10px; margin:15px 0; }
+button.option {
+  display:block;
+  width:80%;
+  margin:10px auto;
+  padding:10px;
+  border:none;
+  border-radius:10px;
+  background:#00c6ff;
+  color:white;
+  cursor:pointer;
+  font-size:16px;
+}
+button.option:hover { background:#0072ff; }
 #result { margin-top:15px; font-weight:bold; }
 #score { margin-top:10px; font-size:18px; }
 #ranking { text-align:left; margin-top:15px; }
@@ -49,9 +59,7 @@ button:hover { background:#0072ff; }
   <div id="timer">Tid kvar: 50</div>
   <div id="progress-container"><div id="progress-bar"></div></div>
   <img id="flag">
-  <input id="answer" placeholder="Vilket land?">
-  <br>
-  <button onclick="checkAnswer()">Skicka</button>
+  <div id="options"></div>
   <p id="result"></p>
   <p id="score"></p>
   <div id="ranking"></div>
@@ -84,20 +92,23 @@ al: { sv: "Albanien", en: "Albania" }, xk: { sv: "Kosovo", en: "Kosovo" }
 };
 
 let roundCountries=[], currentIndex=0, currentCountry, score=0, timeLeft=50, timerInterval;
-let ranking=[];
+let ranking = JSON.parse(localStorage.getItem("ranking")) || [];
 
+// hjälpfunktioner
 function shuffle(array){for(let i=array.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[array[i],array[j]]=[array[j],array[i]];}}
 
+// Start ny runda
 function startNewRound(){
   const temp=[...countryCodes]; shuffle(temp); roundCountries=temp.slice(0,20);
   currentIndex=0; score=0;
   document.getElementById("flag").style.display="";
-  document.getElementById("answer").style.display="";
+  document.getElementById("options").style.display="";
   document.getElementById("timer").style.display="";
   document.getElementById("ranking").innerHTML="";
   updateProgress();
 }
 
+// Timer
 function startTimer(){
   timeLeft=50;
   const timerEl=document.getElementById("timer");
@@ -111,66 +122,95 @@ function startTimer(){
   },1000);
 }
 
+// Ladda flagga + alternativ
 function loadFlag(){
   if(currentIndex>=roundCountries.length){ endGame(); return; }
-  const code=roundCountries[currentIndex]; currentCountry={name:countryNames[code],flag:`https://flagcdn.com/w320/${code}.png`};
+  const code=roundCountries[currentIndex]; 
+  currentCountry={name:countryNames[code], code: code, flag:`https://flagcdn.com/w320/${code}.png`};
   currentIndex++;
   document.getElementById("flag").src=currentCountry.flag;
-  document.getElementById("answer").value="";
   document.getElementById("result").textContent="";
   document.getElementById("timer").classList.remove("warning");
+
+  // skapa alternativ
+  let options=[currentCountry.code];
+  while(options.length<4){
+    const randomCode = countryCodes[Math.floor(Math.random()*countryCodes.length)];
+    if(!options.includes(randomCode)) options.push(randomCode);
+  }
+  shuffle(options);
+
+  const optionsDiv = document.getElementById("options");
+  optionsDiv.innerHTML="";
+  options.forEach(c=>{
+    const btn = document.createElement("button");
+    btn.className="option";
+    btn.textContent=`${countryNames[c].sv} (${countryNames[c].en})`;
+    btn.onclick=()=>checkAnswer(c);
+    optionsDiv.appendChild(btn);
+  });
+
   updateProgress();
   startTimer();
 }
 
+// Progressbar
 function updateProgress(){
   const percent=(currentIndex/roundCountries.length)*100;
   document.getElementById("progress-bar").style.width=percent+"%";
 }
 
-function checkAnswer(){
+// Kontrollera svar
+function checkAnswer(selectedCode){
   clearInterval(timerInterval);
-  const input=document.getElementById("answer").value.toLowerCase();
-  const correctSv=currentCountry.name.sv.toLowerCase();
-  const correctEn=currentCountry.name.en.toLowerCase();
   const card=document.getElementById("card");
-  if(input===correctSv||input===correctEn){ document.getElementById("result").textContent="✅ Rätt!"; score++; card.classList.add("correct"); }
-  else{ document.getElementById("result").textContent=`❌ Fel! Rätt svar: ${currentCountry.name.sv} (${currentCountry.name.en})`; card.classList.add("wrong"); }
-  setTimeout(()=>{ card.classList.remove("correct","wrong"); loadFlag(); },2000);
+  if(selectedCode===currentCountry.code){
+    document.getElementById("result").textContent="✅ Rätt!";
+    score++;
+    card.classList.add("correct");
+  } else {
+    document.getElementById("result").textContent=`❌ Fel! Rätt svar: ${currentCountry.name.sv} (${currentCountry.name.en})`;
+    card.classList.add("wrong");
+  }
+  setTimeout(()=>{ card.classList.remove("correct","wrong"); loadFlag(); },1500);
 }
 
+// Tid slut
 function timeUp(){
   document.getElementById("result").textContent=`⏱ Tiden är slut! Rätt svar: ${currentCountry.name.sv} (${currentCountry.name.en})`;
-  setTimeout(loadFlag,2000);
+  setTimeout(loadFlag,1500);
 }
 
+// Slut på spel
 function endGame(){
   document.getElementById("flag").style.display="none";
-  document.getElementById("answer").style.display="none";
+  document.getElementById("options").style.display="none";
   document.getElementById("timer").style.display="none";
   document.getElementById("result").textContent="";
   document.getElementById("score").textContent=`🎉 Du fick ${score} av 20`;
 
   let playerName=prompt("Ditt namn för rankingen:")||"Spelare";
   ranking.push({name:playerName, score:score});
-  // sortera på poäng högst först
-  ranking.sort((a,b)=>b.score - a.score);
-  if(ranking.length>20) ranking = ranking.slice(0,20); // max 20 spelare
+  ranking.sort((a,b)=>b.score-a.score);
+  if(ranking.length>20) ranking=ranking.slice(0,20);
+  localStorage.setItem("ranking", JSON.stringify(ranking));
 
   let html = "<h3>🏆 Ranking</h3><ol>";
   ranking.forEach(p=>{ html+=`<li>${p.name} - ${p.score}/20</li>`; });
   html+="</ol>";
-  document.getElementById("ranking").innerHTML=html;
+  const rankingDiv = document.getElementById("ranking");
+  rankingDiv.innerHTML = html;
 
   const btn=document.createElement("button");
   btn.textContent="🔄 Spela igen";
   btn.onclick=()=>startNewRound()||loadFlag();
-  document.getElementById("ranking").appendChild(btn);
+  rankingDiv.appendChild(btn);
 }
 
+// Start
 startNewRound();
 loadFlag();
-</script>
 
+</script>
 </body>
 </html>
