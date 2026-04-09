@@ -26,7 +26,6 @@ body {
   transition: 0.3s;
 }
 
-/* Rätt animation */
 .correct {
   animation: correctAnim 0.7s;
 }
@@ -36,7 +35,6 @@ body {
   100% { transform: scale(1); }
 }
 
-/* Fel animation */
 .wrong {
   animation: shake 0.7s;
 }
@@ -100,6 +98,11 @@ button:hover {
   margin-top: 10px;
   font-size: 18px;
 }
+
+#ranking {
+  text-align: left;
+  margin-top: 15px;
+}
 </style>
 </head>
 <body>
@@ -113,6 +116,7 @@ button:hover {
   <button onclick="checkAnswer()">Skicka</button>
   <p id="result"></p>
   <p id="score"></p>
+  <div id="ranking"></div>
 </div>
 
 <script>
@@ -125,30 +129,57 @@ const countryCodes = [
 ];
 
 const countryNames = {
-se:"Sverige", no:"Norge", fi:"Finland", dk:"Danmark", is:"Island",
-fr:"Frankrike", de:"Tyskland", it:"Italien", es:"Spanien", pt:"Portugal",
-nl:"Nederländerna", be:"Belgien", lu:"Luxemburg",
-pl:"Polen", cz:"Tjeckien", sk:"Slovakien", hu:"Ungern",
-at:"Österrike", ch:"Schweiz",
-gr:"Grekland", tr:"Turkiet",
-ee:"Estland", lv:"Lettland", lt:"Litauen",
-ie:"Irland", gb:"Storbritannien",
-ua:"Ukraina", by:"Belarus", md:"Moldavien",
-ro:"Rumänien", bg:"Bulgarien",
-hr:"Kroatien", si:"Slovenien", rs:"Serbien",
-ba:"Bosnien och Hercegovina", me:"Montenegro",
-mk:"Nordmakedonien", al:"Albanien", xk:"Kosovo"
+se: { sv: "Sverige", en: "Sweden" },
+no: { sv: "Norge", en: "Norway" },
+fi: { sv: "Finland", en: "Finland" },
+dk: { sv: "Danmark", en: "Denmark" },
+is: { sv: "Island", en: "Iceland" },
+fr: { sv: "Frankrike", en: "France" },
+de: { sv: "Tyskland", en: "Germany" },
+it: { sv: "Italien", en: "Italy" },
+es: { sv: "Spanien", en: "Spain" },
+pt: { sv: "Portugal", en: "Portugal" },
+nl: { sv: "Nederländerna", en: "Netherlands" },
+be: { sv: "Belgien", en: "Belgium" },
+lu: { sv: "Luxemburg", en: "Luxembourg" },
+pl: { sv: "Polen", en: "Poland" },
+cz: { sv: "Tjeckien", en: "Czech Republic" },
+sk: { sv: "Slovakien", en: "Slovakia" },
+hu: { sv: "Ungern", en: "Hungary" },
+at: { sv: "Österrike", en: "Austria" },
+ch: { sv: "Schweiz", en: "Switzerland" },
+gr: { sv: "Grekland", en: "Greece" },
+tr: { sv: "Turkiet", en: "Turkey" },
+ee: { sv: "Estland", en: "Estonia" },
+lv: { sv: "Lettland", en: "Latvia" },
+lt: { sv: "Litauen", en: "Lithuania" },
+ie: { sv: "Irland", en: "Ireland" },
+gb: { sv: "Storbritannien", en: "United Kingdom" },
+ua: { sv: "Ukraina", en: "Ukraine" },
+by: { sv: "Belarus", en: "Belarus" },
+md: { sv: "Moldavien", en: "Moldova" },
+ro: { sv: "Rumänien", en: "Romania" },
+bg: { sv: "Bulgarien", en: "Bulgaria" },
+hr: { sv: "Kroatien", en: "Croatia" },
+si: { sv: "Slovenien", en: "Slovenia" },
+rs: { sv: "Serbien", en: "Serbia" },
+ba: { sv: "Bosnien och Hercegovina", en: "Bosnia and Herzegovina" },
+me: { sv: "Montenegro", en: "Montenegro" },
+mk: { sv: "Nordmakedonien", en: "North Macedonia" },
+al: { sv: "Albanien", en: "Albania" },
+xk: { sv: "Kosovo", en: "Kosovo" }
 };
 
 let roundCountries = [];
 let currentIndex = 0;
 let currentCountry;
 let score = 0;
-
+let totalTime = 0;
 let timeLeft = 50;
 let timerInterval;
+let questionStartTime;
+let players = [];
 
-// Shuffle-funktion
 function shuffle(array) {
   for (let i = array.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -156,32 +187,29 @@ function shuffle(array) {
   }
 }
 
-// Starta ny runda med 20 unika länder
 function startNewRound() {
   const temp = [...countryCodes];
   shuffle(temp);
   roundCountries = temp.slice(0, 20);
   currentIndex = 0;
   score = 0;
+  totalTime = 0;
+  document.getElementById("flag").style.display = "";
+  document.getElementById("answer").style.display = "";
+  document.getElementById("timer").style.display = "";
+  document.getElementById("ranking").innerHTML = "";
 }
 
-// Timerfunktion
 function startTimer() {
+  questionStartTime = Date.now();
   timeLeft = 50;
   const timerEl = document.getElementById("timer");
-
   timerEl.textContent = "Tid kvar: " + timeLeft;
-
   timerInterval = setInterval(() => {
     timeLeft--;
     timerEl.textContent = "Tid kvar: " + timeLeft;
-
-    if (timeLeft <= 10) {
-      timerEl.classList.add("warning");
-    } else {
-      timerEl.classList.remove("warning");
-    }
-
+    if (timeLeft <= 10) timerEl.classList.add("warning");
+    if (timeLeft > 10) timerEl.classList.remove("warning");
     if (timeLeft <= 0) {
       clearInterval(timerInterval);
       timeUp();
@@ -189,64 +217,79 @@ function startTimer() {
   }, 1000);
 }
 
-// Ladda nästa flagga
 function loadFlag() {
   if (currentIndex >= roundCountries.length) {
     endGame();
     return;
   }
-
   const code = roundCountries[currentIndex];
-  currentCountry = { 
-    name: countryNames[code],
-    flag: `https://flagcdn.com/w320/${code}.png`
-  };
-
+  currentCountry = { name: countryNames[code], flag: `https://flagcdn.com/w320/${code}.png` };
   currentIndex++;
-
   document.getElementById("flag").src = currentCountry.flag;
   document.getElementById("answer").value = "";
   document.getElementById("result").textContent = "";
   document.getElementById("timer").classList.remove("warning");
-
   startTimer();
 }
 
-// Kontrollera svar
 function checkAnswer() {
   clearInterval(timerInterval);
   const input = document.getElementById("answer").value.toLowerCase();
-  const correct = currentCountry.name.toLowerCase();
+  const correctSv = currentCountry.name.sv.toLowerCase();
+  const correctEn = currentCountry.name.en.toLowerCase();
   const card = document.getElementById("card");
+  const timeUsed = Math.round((Date.now() - questionStartTime) / 1000);
+  totalTime += timeUsed;
 
-  if (input === correct) {
+  if (input === correctSv || input === correctEn) {
     document.getElementById("result").textContent = "✅ Rätt!";
     score++;
     card.classList.add("correct");
   } else {
-    document.getElementById("result").textContent = `❌ Fel! Rätt svar: ${currentCountry.name}`;
+    document.getElementById("result").textContent = `❌ Fel! Rätt svar: ${currentCountry.name.sv} (${currentCountry.name.en})`;
     card.classList.add("wrong");
   }
 
   setTimeout(() => {
-    card.classList.remove("correct", "wrong");
+    card.classList.remove("correct","wrong");
     loadFlag();
-  }, 2000); // paus 2 sek mellan flaggor
+  }, 2000);
 }
 
-// Tid slut
 function timeUp() {
-  document.getElementById("result").textContent = `⏱ Tiden är slut! Rätt svar: ${currentCountry.name}`;
+  const timeUsed = 50;
+  totalTime += timeUsed;
+  document.getElementById("result").textContent = `⏱ Tiden är slut! Rätt svar: ${currentCountry.name.sv} (${currentCountry.name.en})`;
   setTimeout(loadFlag, 2000);
 }
 
-// Slut på spelet
 function endGame() {
   document.getElementById("flag").style.display = "none";
   document.getElementById("answer").style.display = "none";
   document.getElementById("timer").style.display = "none";
   document.getElementById("result").textContent = "";
   document.getElementById("score").textContent = `🎉 Du fick ${score} av 20`;
+
+  let playerName = prompt("Ditt namn för rankingen:") || "Spelare";
+  players.push({ name: playerName, score: score, totalTime: totalTime });
+
+  players.sort((a,b) => {
+    if(b.score === a.score) return a.totalTime - b.totalTime;
+    return b.score - a.score;
+  });
+
+  let rankingHTML = "<h3>🏆 Ranking</h3><ol>";
+  players.forEach(p => {
+    rankingHTML += `<li>${p.name} - ${p.score}/20 poäng, ${p.totalTime}s</li>`;
+  });
+  rankingHTML += "</ol>";
+  document.getElementById("ranking").innerHTML = rankingHTML;
+
+  // Lägg till knapp för ny runda
+  const btn = document.createElement("button");
+  btn.textContent = "🔄 Spela igen";
+  btn.onclick = () => startNewRound() || loadFlag();
+  document.getElementById("ranking").appendChild(btn);
 }
 
 // Starta spelet
